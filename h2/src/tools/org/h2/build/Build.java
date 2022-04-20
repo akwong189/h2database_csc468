@@ -874,7 +874,7 @@ public class Build extends BuildBase {
      */
     @Description(summary = "Compile and run all tests (excluding the compile step).")
     public void test() {
-        test(false);
+        test(false, false);
     }
 
     /**
@@ -882,10 +882,15 @@ public class Build extends BuildBase {
      */
     @Description(summary = "Compile and run all tests for CI (excl. the compile step).")
     public void testCI() {
-        test(true);
+        test(true, false);
     }
 
-    private void test(boolean ci) {
+    @Description(summary = "Compile and run all tests for Cache (excl. the compile step).")
+    public void testCache() {
+        test(false, true);
+    }
+
+    private void test(boolean ci, boolean cache) {
         downloadTest();
         String cp = "temp" + File.pathSeparator + "bin" +
                 File.pathSeparator + "ext/postgresql-" + PGJDBC_VERSION + ".jar" +
@@ -916,6 +921,12 @@ public class Build extends BuildBase {
                     "-XX:MaxDirectMemorySize=2g",
                     "-cp", cp,
                     "org.h2.test.TestAll", "ci"));
+        } else if (cache) {
+            ret = execJava(args(
+                    "-ea",
+                    "-Xmx128m",
+                    "-cp", cp,
+                    "org.h2.test.TestAll", "cache"));
         } else {
             ret = execJava(args(
                     "-ea",

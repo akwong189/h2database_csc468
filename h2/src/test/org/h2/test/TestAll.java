@@ -526,6 +526,8 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
                 new TestHaltApp().runTest(test);
             } else if ("timer".equals(args[0])) {
                 new TestTimer().runTest(test);
+            } else if ("cache".equals(args[0])) {
+                new TestCache().runTest(test);
             }
         } else {
             test.testAll(args, 0);

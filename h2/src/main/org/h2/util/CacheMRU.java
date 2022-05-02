@@ -7,7 +7,6 @@ package org.h2.util;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Map;
 import org.h2.engine.Constants;
 import org.h2.engine.SysProperties;
 import org.h2.message.DbException;

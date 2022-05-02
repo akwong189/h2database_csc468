@@ -16,6 +16,9 @@ public class Config {
      */
     public int segmentCount = 16;
 
+
+    // These last three items are lirs specific
+
     /**
      * How many other item are to be moved to the top of the stack before
      * the current item is moved.

@@ -65,6 +65,7 @@ public class Entry<V> {
     Entry<V> mapNext;
 
 
+    // Only these 2 functions are used by all, but others can remain if we want to just have 1 entry file
     Entry() {
         this(0L, null, 0);
     }

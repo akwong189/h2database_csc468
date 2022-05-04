@@ -121,6 +121,9 @@ public class Segment<V> {
      * @param nonResidentQueueSize the non-resident queue size low watermark factor
      * @param nonResidentQueueSizeHigh  the non-resident queue size high watermark factor
      */
+
+
+     // The queue variables can be added in the lirs specific version of segment
     Segment(long maxMemory, int stackMoveDistance, int len,
             int nonResidentQueueSize, int nonResidentQueueSizeHigh) {
         setMaxMemory(maxMemory);
@@ -152,6 +155,8 @@ public class Segment<V> {
      * @param old the old segment
      * @param len the number of hash table buckets (must be a power of 2)
      */
+
+     // Stack and queue can be overriden in other versions
     Segment(Segment<V> old, int len) {
         this(old.maxMemory, old.stackMoveDistance, len,
                 old.nonResidentQueueSize, old.nonResidentQueueSizeHigh);
@@ -239,6 +244,8 @@ public class Segment<V> {
      *
      * @param e entry to record access for
      */
+
+     // Can be rewritten to not have stack and queue stuff, and just access the hashmap
     private void access(Entry<V> e) {
         if (e.isHot()) {
             if (e != stack.stackNext && e.stackNext != null) {
@@ -395,6 +402,8 @@ public class Segment<V> {
         } while (usedMemory > maxMemory);
     }
 
+
+    // LIRS cache specific, already private
     private void evictBlock() {
         // ensure there are not too many hot entries: right shift of 5 is
         // division by 32, that means if there are only 1/32 (3.125%) or
@@ -414,7 +423,7 @@ public class Segment<V> {
             trimNonResidentQueue();
         }
     }
-
+    // LIRS cache specific
     void trimNonResidentQueue() {
         int residentCount = mapSize - queue2Size;
         int maxQueue2SizeHigh = nonResidentQueueSizeHigh * residentCount;
@@ -431,7 +440,7 @@ public class Segment<V> {
             remove(e.key, hash);
         }
     }
-
+    // LIRS cache specific
     private void convertOldestHotToCold() {
         // the last entry of the stack is known to be hot
         Entry<V> last = stack.stackPrev;
@@ -451,6 +460,7 @@ public class Segment<V> {
     /**
      * Ensure the last entry of the stack is cold.
      */
+    // LIRS cache specific
     private void pruneStack() {
         while (true) {
             Entry<V> last = stack.stackPrev;
@@ -481,6 +491,7 @@ public class Segment<V> {
         return e;
     }
 
+    // LIRS cache specific
     private void addToStack(Entry<V> e) {
         e.stackPrev = stack;
         e.stackNext = stack.stackNext;
@@ -490,6 +501,7 @@ public class Segment<V> {
         e.topMove = stackMoveCounter++;
     }
 
+    // LIRS cache specific
     private void addToStackBottom(Entry<V> e) {
         e.stackNext = stack;
         e.stackPrev = stack.stackPrev;

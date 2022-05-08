@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
 import org.h2.mvstore.cache.CacheLongKeyLIRS;
+import org.h2.mvstore.cache.Config;
 import org.h2.test.TestBase;
 
 /**
@@ -495,7 +496,7 @@ public class TestCacheLongKeyLIRS extends TestBase {
     }
 
     private static <V> CacheLongKeyLIRS<V> createCache(int maxSize) {
-        CacheLongKeyLIRS.Config cc = new CacheLongKeyLIRS.Config();
+        Config cc = new Config();
         cc.maxMemory = maxSize;
         cc.segmentCount = 1;
         cc.stackMoveDistance = 0;

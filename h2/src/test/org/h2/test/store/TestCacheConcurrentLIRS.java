@@ -9,6 +9,7 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.h2.mvstore.cache.CacheLongKeyLIRS;
+import org.h2.mvstore.cache.Config;
 import org.h2.test.TestBase;
 import org.h2.util.Task;
 
@@ -32,7 +33,7 @@ public class TestCacheConcurrentLIRS extends TestBase {
     }
 
     private void testConcurrent() {
-        CacheLongKeyLIRS.Config cc = new CacheLongKeyLIRS.Config();
+        Config cc = new Config();
         cc.maxMemory = 100;
         final CacheLongKeyLIRS<Integer> test = new CacheLongKeyLIRS<>(cc);
         int threadCount = 8;

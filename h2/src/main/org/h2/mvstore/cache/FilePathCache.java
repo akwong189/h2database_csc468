@@ -55,7 +55,7 @@ public class FilePathCache extends FilePathWrapper {
         private final CacheLongKeyLIRS<ByteBuffer> cache;
 
         {
-            CacheLongKeyLIRS.Config cc = new CacheLongKeyLIRS.Config();
+            Config cc = new Config();
             // 1 MB cache size
             cc.maxMemory = 1024 * 1024;
             cache = new CacheLongKeyLIRS<>(cc);

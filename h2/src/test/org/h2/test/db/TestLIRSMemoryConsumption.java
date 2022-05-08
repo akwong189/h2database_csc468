@@ -7,6 +7,7 @@ package org.h2.test.db;
 
 import java.util.Random;
 import org.h2.mvstore.cache.CacheLongKeyLIRS;
+import org.h2.mvstore.cache.Config;
 import org.h2.test.TestBase;
 import org.h2.test.TestDb;
 import org.h2.util.Utils;
@@ -43,7 +44,7 @@ public class TestLIRSMemoryConsumption extends TestDb {
     private static void testMemoryConsumption() {
         int size = 1_000_000;
         Random rng = new Random();
-        CacheLongKeyLIRS.Config config = new CacheLongKeyLIRS.Config();
+        Config config = new Config();
         for (int mb = 1; mb <= 16; mb *= 2) {
             config.maxMemory = mb * 1024 * 1024;
             CacheLongKeyLIRS<Object> cache = new CacheLongKeyLIRS<>(config);

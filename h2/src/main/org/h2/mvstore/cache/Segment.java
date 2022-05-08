@@ -12,7 +12,7 @@ import java.lang.ref.WeakReference;
  *
  * @param <V> the value type
  */
-public class Segment<V> {
+public class Segment<V> extends SegmentParent<V>  {
 
     /**
      * The number of (hot, cold, and non-resident) entries in the map.
@@ -126,7 +126,8 @@ public class Segment<V> {
      // The queue variables can be added in the lirs specific version of segment
     Segment(long maxMemory, int stackMoveDistance, int len,
             int nonResidentQueueSize, int nonResidentQueueSizeHigh) {
-        setMaxMemory(maxMemory);
+        super(maxMemory);
+
         this.stackMoveDistance = stackMoveDistance;
         this.nonResidentQueueSize = nonResidentQueueSize;
         this.nonResidentQueueSizeHigh = nonResidentQueueSizeHigh;

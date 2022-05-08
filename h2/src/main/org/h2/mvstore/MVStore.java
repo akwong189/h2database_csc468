@@ -45,6 +45,7 @@ import org.h2.compress.CompressDeflate;
 import org.h2.compress.CompressLZF;
 import org.h2.compress.Compressor;
 import org.h2.mvstore.cache.CacheLongKeyLIRS;
+import org.h2.mvstore.cache.Config;
 import org.h2.mvstore.type.StringDataType;
 import org.h2.util.MathUtils;
 import org.h2.util.Utils;
@@ -397,19 +398,19 @@ public class MVStore implements AutoCloseable {
         this.fileStore = fileStore;
 
         int pgSplitSize = 48; // for "mem:" case it is # of keys
-        CacheLongKeyLIRS.Config cc = null;
-        CacheLongKeyLIRS.Config cc2 = null;
+        Config cc = null;
+        Config cc2 = null;
         if (this.fileStore != null) {
             int mb = DataUtils.getConfigParam(config, "cacheSize", 16);
             if (mb > 0) {
-                cc = new CacheLongKeyLIRS.Config();
+                cc = new Config();
                 cc.maxMemory = mb * 1024L * 1024L;
                 Object o = config.get("cacheConcurrency");
                 if (o != null) {
                     cc.segmentCount = (Integer)o;
                 }
             }
-            cc2 = new CacheLongKeyLIRS.Config();
+            cc2 = new Config();
             cc2.maxMemory = 1024L * 1024L;
             pgSplitSize = 16 * 1024;
         }

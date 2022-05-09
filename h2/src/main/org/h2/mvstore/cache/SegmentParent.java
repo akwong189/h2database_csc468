@@ -28,7 +28,7 @@ abstract class SegmentParent<V> {
      * @param nonResidentQueueSize the non-resident queue size low watermark factor
      * @param nonResidentQueueSizeHigh  the non-resident queue size high watermark factor
      */
-    SegmentParent(long maxMemory) {
+    SegmentParent(long maxMemory, int len) {
         this.maxMemory = maxMemory;
         setMaxMemory(maxMemory);
      }

@@ -85,7 +85,33 @@ public class RandomSegment extends SegmentParent {
      * @return the old value, or null if there was no resident entry
      */
     synchronized V put(long key, int hash, V value, int memory) {
-        return null;
+        Entry<V> e = find(key, hash);
+        boolean existed = e != null;
+        V old = null;
+        if (existed) {
+            old = e.getValue();
+            remove(key, hash);
+        }
+        if (memory > maxMemory) {
+            // the new entry is too big to fit
+            return old;
+        }
+        e = new Entry<>(key, value, memory);
+        int index = hash & mask;
+        e.mapNext = entries[index];
+        entries[index] = e;
+        usedMemory += memory;
+        if (usedMemory > maxMemory) {
+            // old entries needs to be removed
+            evict();
+        }
+        mapSize++;
+        // added entries are always added to the stack
+        if (existed) {
+            // if it was there before (even non-resident), it becomes hot
+            access(e);
+        }
+        return old;
     }
 
     /**
@@ -98,6 +124,16 @@ public class RandomSegment extends SegmentParent {
      */
     synchronized V remove(long key, int hash) {
         return null;
+    }
+
+    private void evict() {
+        do {
+            evictBlock();
+        } while (usedMemory > maxMemory);
+    }
+
+    private void evictBlock() {
+        // pick a random block
     }
 
     /**
@@ -125,16 +161,5 @@ public class RandomSegment extends SegmentParent {
      * @return the set of keys
      */
     Set<Long> keySet();
-
-    /**
-     * Set the maximum memory this cache should use. This will not
-     * immediately cause entries to get removed however; it will only change
-     * the limit. To resize the internal array, call the clear method.
-     *
-     * @param maxMemory the maximum size (1 or larger) in bytes
-     */
-    void setMaxMemory(long maxMemory) {
-        this.maxMemory = maxMemory;
-    }
     
 }

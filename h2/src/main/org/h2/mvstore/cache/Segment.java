@@ -210,6 +210,7 @@ public class Segment<V> extends SegmentParent<V>  {
         return 0;
     }
 
+    // moved to parent
     private void addToMap(Entry<V> e) {
         int index = getHash(e.key) & mask;
         e.mapNext = entries[index];

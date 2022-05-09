@@ -39,7 +39,25 @@ abstract class SegmentParent<V> {
      *
      * @return 0 if no resizing is needed, or the new length
      */
-    abstract int getNewMapLen();
+    int getNewMapLen() {
+        int len = mask + 1;
+        if (len * 3 < mapSize * 4 && len < (1 << 28)) {
+            // more than 75% usage
+            return len * 2;
+        } else if (len > 32 && len / 8 > mapSize) {
+            // less than 12% usage
+            return len / 2;
+        }
+        return 0;
+    }
+
+    void addToMap(Entry<V> e) {
+        int index = getHash(e.key) & mask;
+        e.mapNext = entries[index];
+        entries[index] = e;
+        usedMemory += e.getMemory();
+        mapSize++;
+    }
 
     /**
      * Get the value from the given entry.
@@ -74,6 +92,10 @@ abstract class SegmentParent<V> {
      */
     abstract V remove(long key, int hash);// {return null;}
 
+    // Maybe make evict a function that calls abstract evictblock
+    abstract void evict();
+    abstract void evictBlock();
+
     /**
      * Try to find an entry in the map.
      *
@@ -81,7 +103,14 @@ abstract class SegmentParent<V> {
      * @param hash the hash
      * @return the entry (might be a non-resident)
      */
-    abstract Entry<V> find(long key, int hash);
+    Entry<V> find(long key, int hash) {
+        int index = hash & mask;
+        Entry<V> e = entries[index];
+        while (e != null && e.key != key) {
+            e = e.mapNext;
+        }
+        return e;
+    }
 
     /**
      * Get the list of keys. This method allows to read the internal state
@@ -98,7 +127,16 @@ abstract class SegmentParent<V> {
      *
      * @return the set of keys
      */
-    abstract Set<Long> keySet();
+    synchronized Set<Long> keySet() {
+        HashSet<Long> set = new HashSet<>();
+        for (Entry<V> e = stack.stackNext; e != stack; e = e.stackNext) {
+            set.add(e.key);
+        }
+        for (Entry<V> e = queue.queueNext; e != queue; e = e.queueNext) {
+            set.add(e.key);
+        }
+        return set;
+    }
 
     /**
      * Set the maximum memory this cache should use. This will not
@@ -110,7 +148,6 @@ abstract class SegmentParent<V> {
     void setMaxMemory(long maxMemory) {
         this.maxMemory = maxMemory;
     }
-
 
     /**
      * Get the hash code for the given key. The hash code is

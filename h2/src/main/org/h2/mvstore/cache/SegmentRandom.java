@@ -123,17 +123,30 @@ public class SegmentRandom extends SegmentParent {
      * @return the old value, or null if there was no resident entry
      */
     synchronized V remove(long key, int hash) {
-        return null;
-    }
-
-    private void evict() {
-        do {
-            evictBlock();
-        } while (usedMemory > maxMemory);
-    }
-
-    private void evictBlock() {
-        // pick a random block
+        // Not quite sure what this does, I think it just takes a key and hash and removes it from the map. 
+        int index = hash & mask;
+        Entry<V> e = entries[index];
+        if (e == null) {
+            return null;
+        }
+        if (e.key == key) {
+            entries[index] = e.mapNext;
+        } else {
+            Entry<V> last;
+            do {
+                last = e;
+                e = e.mapNext;
+                if (e == null) {
+                    return null;
+                }
+            } while (e.key != key);
+            last.mapNext = e.mapNext;
+        }
+        V old = e.getValue();
+        mapSize--;
+        usedMemory -= e.getMemory();
+    
+        return old;
     }
 
     /**

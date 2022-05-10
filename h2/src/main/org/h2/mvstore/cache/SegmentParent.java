@@ -92,9 +92,6 @@ abstract class SegmentParent<V> {
      */
     abstract V remove(long key, int hash);// {return null;}
 
-    // Maybe make evict a function that calls abstract evictblock
-    abstract void evict();
-    abstract void evictBlock();
 
     /**
      * Try to find an entry in the map.

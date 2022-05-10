@@ -39,15 +39,6 @@ public class Segment<V> extends SegmentParent<V>  {
      */
     long misses;
 
-    /**
-     * The map array. The size is always a power of 2.
-     */
-    final Entry<V>[] entries;
-
-    /**
-     * The currently used memory.
-     */
-    long usedMemory;
 
     /**
      * How many other item are to be moved to the top of the stack before
@@ -126,7 +117,7 @@ public class Segment<V> extends SegmentParent<V>  {
      // The queue variables can be added in the lirs specific version of segment
     Segment(long maxMemory, int stackMoveDistance, int len,
             int nonResidentQueueSize, int nonResidentQueueSizeHigh) {
-        super(maxMemory);
+        super(maxMemory, len);
 
         this.stackMoveDistance = stackMoveDistance;
         this.nonResidentQueueSize = nonResidentQueueSize;
@@ -142,10 +133,6 @@ public class Segment<V> extends SegmentParent<V>  {
         queue.queuePrev = queue.queueNext = queue;
         queue2 = new Entry<>();
         queue2.queuePrev = queue2.queueNext = queue2;
-
-        @SuppressWarnings("unchecked")
-        Entry<V>[] e = new Entry[len];
-        entries = e;
     }
 
     /**
@@ -208,15 +195,6 @@ public class Segment<V> extends SegmentParent<V>  {
             return len / 2;
         }
         return 0;
-    }
-
-    // moved to parent
-    private void addToMap(Entry<V> e) {
-        int index = getHash(e.key) & mask;
-        e.mapNext = entries[index];
-        entries[index] = e;
-        usedMemory += e.getMemory();
-        mapSize++;
     }
 
     /**

@@ -16,8 +16,19 @@ abstract class SegmentParent<V> {
     /**
      * The maximum memory this cache should use in bytes.
      */
-    private long maxMemory;
+    long maxMemory;
+    int mask;
+    int mapSize;
 
+    /**
+     * The map array. The size is always a power of 2.
+     */
+    final Entry<V>[] entries;
+
+    /**
+     * The currently used memory.
+     */
+    long usedMemory;
 
     /**
      * Create a new cache segment.
@@ -30,7 +41,12 @@ abstract class SegmentParent<V> {
      */
     SegmentParent(long maxMemory, int len) {
         this.maxMemory = maxMemory;
+        mask = len - 1;
         setMaxMemory(maxMemory);
+
+        @SuppressWarnings("unchecked")
+        Entry<V>[] e = new Entry[len];
+        entries = e;
      }
     
     /**
@@ -124,16 +140,7 @@ abstract class SegmentParent<V> {
      *
      * @return the set of keys
      */
-    synchronized Set<Long> keySet() {
-        HashSet<Long> set = new HashSet<>();
-        for (Entry<V> e = stack.stackNext; e != stack; e = e.stackNext) {
-            set.add(e.key);
-        }
-        for (Entry<V> e = queue.queueNext; e != queue; e = e.queueNext) {
-            set.add(e.key);
-        }
-        return set;
-    }
+    abstract Set<Long> keySet();
 
     /**
      * Set the maximum memory this cache should use. This will not

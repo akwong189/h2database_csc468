@@ -1,6 +1,6 @@
 package org.h2.mvstore.cache;
 
-public class RandomSegment extends SegmentParent {
+public class SegmentRandom extends SegmentParent {
 
     /**
      * The bit mask that is applied to the key hash code to get the index in
@@ -8,7 +8,7 @@ public class RandomSegment extends SegmentParent {
      */
     private final int mask;
 
-    RandomSegment(long maxMemory, int len) {
+    SegmentRandom(long maxMemory, int len) {
         super(maxMemory, len);
 
         @SuppressWarnings("unchecked")
@@ -17,7 +17,7 @@ public class RandomSegment extends SegmentParent {
 
     }
 
-    RandomSegment(RandomSegment<V> old, int len) {
+    SegmentRandom(RandomSegment<V> old, int len) {
         
 
     }

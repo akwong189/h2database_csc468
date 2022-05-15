@@ -55,25 +55,9 @@ abstract class SegmentParent<V> {
      *
      * @return 0 if no resizing is needed, or the new length
      */
-    int getNewMapLen() {
-        int len = mask + 1;
-        if (len * 3 < mapSize * 4 && len < (1 << 28)) {
-            // more than 75% usage
-            return len * 2;
-        } else if (len > 32 && len / 8 > mapSize) {
-            // less than 12% usage
-            return len / 2;
-        }
-        return 0;
-    }
+    abstract int getNewMapLen();
 
-    void addToMap(Entry<V> e) {
-        int index = getHash(e.key) & mask;
-        e.mapNext = entries[index];
-        entries[index] = e;
-        usedMemory += e.getMemory();
-        mapSize++;
-    }
+    abstract void addToMap(Entry<V> e);
 
     /**
      * Get the value from the given entry.

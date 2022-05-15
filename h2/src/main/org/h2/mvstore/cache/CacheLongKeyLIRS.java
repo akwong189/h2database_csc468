@@ -100,7 +100,7 @@ public class CacheLongKeyLIRS<V> {
     }
 
     private Entry<V> find(long key) {
-        int hash = Segment.getHash(key);
+        int hash = SegmentParent.getHash(key);
         return getSegment(hash).find(key, hash);
     }
 
@@ -154,7 +154,7 @@ public class CacheLongKeyLIRS<V> {
             throw DataUtils.newIllegalArgumentException(
                     "The value may not be null");
         }
-        int hash = Segment.getHash(key);
+        int hash = SegmentParent.getHash(key);
         int segmentIndex = getSegmentIndex(hash);
         Segment<V> s = segments[segmentIndex];
         // check whether resize is required: synchronize on s, to avoid
@@ -201,7 +201,7 @@ public class CacheLongKeyLIRS<V> {
      * @return the old value, or null if there was no resident entry
      */
     public V remove(long key) {
-        int hash = Segment.getHash(key);
+        int hash = SegmentParent.getHash(key);
         int segmentIndex = getSegmentIndex(hash);
         Segment<V> s = segments[segmentIndex];
         // check whether resize is required: synchronize on s, to avoid
@@ -233,7 +233,7 @@ public class CacheLongKeyLIRS<V> {
      * @return the value, or null if there is no resident entry
      */
     public V get(long key) {
-        int hash = Segment.getHash(key);
+        int hash = SegmentParent.getHash(key);
         Segment<V> s = getSegment(hash);
         Entry<V> e = s.find(key, hash);
         return s.get(e);

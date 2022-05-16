@@ -24,7 +24,7 @@ class SegmentRandom<V> extends SegmentParent<V> {
     // int mapSize;
     // final Entry<V>[] entries;
     // long usedMemory;
-    // All are inheirited functions
+    // All are inheirited vars
 
 
     SegmentRandom(long maxMemory, int len) {
@@ -113,19 +113,6 @@ class SegmentRandom<V> extends SegmentParent<V> {
         return old;
     }
 
-
-    /**
-     * Try to find an entry in the map.
-     *
-     * @param key the key
-     * @param hash the hash
-     * @return the entry (might be a non-resident)
-     */
-    // Entry<V> find(long key, int hash) 
-
-
-
-
     /**
      * Get the list of keys. This method allows to read the internal state
      * of the cache.
@@ -150,22 +137,4 @@ class SegmentRandom<V> extends SegmentParent<V> {
         
         return set;
     }
-
-    /**
-     * Set the maximum memory this cache should use. This will not
-     * immediately cause entries to get removed however; it will only change
-     * the limit. To resize the internal array, call the clear method.
-     *
-     * @param maxMemory the maximum size (1 or larger) in bytes
-     */
-    // setMaxMemory(long maxMemory)
-
-    /**
-     * Get the hash code for the given key. The hash code is
-     * further enhanced to spread the values more evenly.
-     *
-     * @param key the key
-     * @return the hash code
-     */
-    // static int getHash(long key)
 }

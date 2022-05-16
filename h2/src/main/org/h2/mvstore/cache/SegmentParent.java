@@ -48,6 +48,8 @@ abstract class SegmentParent<V> {
         Entry<V>[] e = new Entry[len];
         entries = e;
      }
+
+    // getNewMapLen(), addToMap(), get() all added to parent, commented out of Segment LIRS
     
     /**
      * Calculate the new number of hash table buckets if the internal map
@@ -55,9 +57,25 @@ abstract class SegmentParent<V> {
      *
      * @return 0 if no resizing is needed, or the new length
      */
-    abstract int getNewMapLen();
+    int getNewMapLen() {
+        int len = mask + 1;
+        if (len * 3 < mapSize * 4 && len < (1 << 28)) {
+            // more than 75% usage
+            return len * 2;
+        } else if (len > 32 && len / 8 > mapSize) {
+            // less than 12% usage
+            return len / 2;
+        }
+        return 0;
+    }
 
-    abstract void addToMap(Entry<V> e);
+    void addToMap(Entry<V> e) {
+        int index = SegmentParent.getHash(e.key) & mask;
+        e.mapNext = entries[index];
+        entries[index] = e;
+        usedMemory += e.getMemory();
+        mapSize++;
+    }
 
     /**
      * Get the value from the given entry.
@@ -67,7 +85,27 @@ abstract class SegmentParent<V> {
      * @param e the entry
      * @return the value, or null if there is no resident entry
      */
-    abstract V get(Entry<V> e);// {return null;}
+    // abstract V get(Entry<V> e);// {return null;}
+    synchronized V get(Entry<V> e) {
+        V value = e == null ? null : e.getValue();
+        if (value == null) {
+            // the entry was not found
+            // or it was a non-resident entry
+            misses++;
+        } else {
+            access(e);
+            hits++;
+        }
+        return value;
+    }
+
+    /**
+    * Access an item
+    *
+    * @param e entry to record access for
+    */
+    // This might just be only for lirs
+    // abstract void access(Entry<V> e);
 
     /**
      * Add an entry to the cache. The entry may or may not exist in the
@@ -83,8 +121,7 @@ abstract class SegmentParent<V> {
     abstract V put(long key, int hash, V value, int memory);// {return null;}
 
     /**
-     * Remove an entry. Both resident and non-resident entries can be
-     * removed.
+     * Remove an entry
      *
      * @param key the key (may not be null)
      * @param hash the hash

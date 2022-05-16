@@ -1,174 +1,171 @@
-// package org.h2.mvstore.cache;
-// import java.util.Set;
+/*
+ * Copyright 2004-2022 H2 Group. Multiple-Licensed under the MPL 2.0,
+ * and the EPL 1.0 (https://h2database.com/html/license.html).
+ * Initial Developer: H2 Group
+ */
+package org.h2.mvstore.cache;
 
-// public class SegmentRandom<V> extends SegmentParent<V> {
-//     /**
-//      * The bit mask that is applied to the key hash code to get the index in
-//      * the map array. The mask is the length of the array minus one.
-//      */
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.h2.mvstore.DataUtils;
 
-//     SegmentRandom(long maxMemory, int len) {
-//         super(maxMemory, len);
-//     }
+class SegmentRandom<V> extends SegmentParent<V> {
 
-//     // SegmentRandom(RandomSegment<V> old, int len) {
+    long hits;
+    long misses;
+
+    // long maxMemory;
+    // int mask;
+    // int mapSize;
+    // final Entry<V>[] entries;
+    // long usedMemory;
+    // All are inheirited functions
+
+
+    SegmentRandom(long maxMemory, int len) {
+        super(maxMemory, len);
+    }
+
+    SegmentRandom(Segment<V> old, int len) {
+        hits = old.hits;
+        misses = old.misses; 
+    }
+
+    // abstract void addToMap(Entry<V> e);
+
+    /**
+    * Access an item, might only be LIRS
+    *
+    * @param e entry to record access for
+    */
+    // void access(Entry<V> e)
+
+    /**
+     * Add an entry to the cache. The entry may or may not exist in the
+     * cache yet. This method will usually mark unknown entries as cold and
+     * known entries as hot.
+     *
+     * @param key the key (may not be null)
+     * @param hash the hash
+     * @param value the value (may not be null)
+     * @param memory the memory used for the given entry
+     * @return the old value, or null if there was no resident entry
+     */
+    synchronized V put(long key, int hash, V value, int memory) {// {return null;}
+        Entry<V> e = find(key, hash);
+        boolean existed = e != null;
+        V old = null;
+        if (existed) {
+            old = e.getValue();
+            remove(key, hash);
+        }
+        if (memory > maxMemory) {
+            // the new entry is too big to fit
+            return old;
+        }
+        e = new Entry<>(key, value, memory);
+        int index = hash & mask;
+        e.mapNext = entries[index];
+        entries[index] = e;
+        usedMemory += memory;
+        // if (usedMemory > maxMemory) {
+        //     // Pick a random entry, remove
+        // }
+        mapSize++;
+        return old;
+    }
+
+    /**
+     * Remove an entry
+     *
+     * @param key the key (may not be null)
+     * @param hash the hash
+     * @return the old value, or null if there was no resident entry
+     */
+    synchronized V remove(long key, int hash) {
+        int index = hash & mask;
+        Entry<V> e = entries[index];
+        if (e == null) {
+            return null;
+        }
+        if (e.key == key) {
+            entries[index] = e.mapNext;
+        } else {
+            Entry<V> last;
+            do {
+                last = e;
+                e = e.mapNext;
+                if (e == null) {
+                    return null;
+                }
+            } while (e.key != key);
+            last.mapNext = e.mapNext;
+        }
+        V old = e.getValue();
+        mapSize--;
+        usedMemory -= e.getMemory();
+
+        return old;
+    }
+
+
+    /**
+     * Try to find an entry in the map.
+     *
+     * @param key the key
+     * @param hash the hash
+     * @return the entry (might be a non-resident)
+     */
+    // Entry<V> find(long key, int hash) 
+
+
+
+
+    /**
+     * Get the list of keys. This method allows to read the internal state
+     * of the cache.
+     *
+     * @param cold if true, only keys for the cold entries are returned
+     * @param nonResident true for non-resident entries
+     * @return the key list
+     */
+    synchronized List<Long> keys(boolean cold, boolean nonResident) {
+        ArrayList<Long> keys = new ArrayList<>();
+
+        return keys;
+    }
+
+    /**
+     * Get the set of keys for resident entries.
+     *
+     * @return the set of keys
+     */
+    synchronized Set<Long> keySet() { 
+        HashSet<Long> set = new HashSet<>();
         
+        return set;
+    }
 
-//     // }
+    /**
+     * Set the maximum memory this cache should use. This will not
+     * immediately cause entries to get removed however; it will only change
+     * the limit. To resize the internal array, call the clear method.
+     *
+     * @param maxMemory the maximum size (1 or larger) in bytes
+     */
+    // setMaxMemory(long maxMemory)
 
-
-//     /**
-//      * Calculate the new number of hash table buckets if the internal map
-//      * should be re-sized.
-//      *
-//      * @return 0 if no resizing is needed, or the new length
-//      */
-
-//      // This function could be moved to parent
-//     int getNewMapLen() {
-//         int len = mask + 1;
-//         if (len * 3 < mapSize * 4 && len < (1 << 28)) {
-//             // more than 75% usage
-//             return len * 2;
-//         } else if (len > 32 && len / 8 > mapSize) {
-//             // less than 12% usage
-//             return len / 2;
-//         }
-//         return 0;
-//     }
-
-//     // This function could be moved to parent, lirs also uses
-//     // private void addToMap(Entry<V> e) {
-//     //     int index = getHash(e.key) & mask;
-//     //     e.mapNext = entries[index];
-//     //     entries[index] = e;
-//     //     usedMemory += e.getMemory();
-//     //     mapSize++;
-//     // }
-
-//     /**
-//      * Get the value from the given entry.
-//      * This method adjusts the internal state of the cache sometimes,
-//      * to ensure commonly used entries stay in the cache.
-//      *
-//      * @param e the entry
-//      * @return the value, or null if there is no resident entry
-//      */
-//     synchronized V get(Entry<V> e) {
-//         V value = e == null ? null : e.getValue();
-//         if (value == null) {
-//             // the entry was not found
-//             // or it was a non-resident entry
-//             misses++;
-//         } else {
-//             access(e);
-//             hits++;
-//         }
-//         return value;
-//     } 
-
-//     /**
-//      * Add an entry to the cache. The entry may or may not exist in the
-//      * cache yet. This method will usually mark unknown entries as cold and
-//      * known entries as hot.
-//      *
-//      * @param key the key (may not be null)
-//      * @param hash the hash
-//      * @param value the value (may not be null)
-//      * @param memory the memory used for the given entry
-//      * @return the old value, or null if there was no resident entry
-//      */
-//     synchronized V put(long key, int hash, V value, int memory) {
-//         Entry<V> e = find(key, hash);
-//         boolean existed = e != null;
-//         V old = null;
-//         if (existed) {
-//             old = e.getValue();
-//             remove(key, hash);
-//         }
-//         if (memory > maxMemory) {
-//             // the new entry is too big to fit
-//             return old;
-//         }
-//         e = new Entry<>(key, value, memory);
-//         int index = hash & mask;
-//         e.mapNext = entries[index];
-//         entries[index] = e;
-//         usedMemory += memory;
-//         if (usedMemory > maxMemory) {
-//             // old entries needs to be removed
-//             evict();
-//         }
-//         mapSize++;
-//         // added entries are always added to the stack
-//         if (existed) {
-//             // if it was there before (even non-resident), it becomes hot
-//             access(e);
-//         }
-//         return old;
-//     }
-
-//     /**
-//      * Remove an entry. Both resident and non-resident entries can be
-//      * removed.
-//      *
-//      * @param key the key (may not be null)
-//      * @param hash the hash
-//      * @return the old value, or null if there was no resident entry
-//      */
-//     synchronized V remove(long key, int hash) {
-//         // Not quite sure what this does, I think it just takes a key and hash and removes it from the map. 
-//         int index = hash & mask;
-//         Entry<V> e = entries[index];
-//         if (e == null) {
-//             return null;
-//         }
-//         if (e.key == key) {
-//             entries[index] = e.mapNext;
-//         } else {
-//             Entry<V> last;
-//             do {
-//                 last = e;
-//                 e = e.mapNext;
-//                 if (e == null) {
-//                     return null;
-//                 }
-//             } while (e.key != key);
-//             last.mapNext = e.mapNext;
-//         }
-//         V old = e.getValue();
-//         mapSize--;
-//         usedMemory -= e.getMemory();
-    
-//         return old;
-//     }
-
-//     /**
-//      * Try to find an entry in the map.
-//      *
-//      * @param key the key
-//      * @param hash the hash
-//      * @return the entry (might be a non-resident)
-//      */
-//     Entry<V> find(long key, int hash);
-
-//     /**
-//      * Get the list of keys. This method allows to read the internal state
-//      * of the cache.
-//      *
-//      * @param cold if true, only keys for the cold entries are returned
-//      * @param nonResident true for non-resident entries
-//      * @return the key list
-//      */
-//     List<Long> keys(boolean cold, boolean nonResident);
-
-//     /**
-//      * Get the set of keys for resident entries.
-//      *
-//      * @return the set of keys
-//      */
-//     Set<Long> keySet() {
-//         return null;
-//     }
-    
-// }
+    /**
+     * Get the hash code for the given key. The hash code is
+     * further enhanced to spread the values more evenly.
+     *
+     * @param key the key
+     * @return the hash code
+     */
+    // static int getHash(long key)
+}

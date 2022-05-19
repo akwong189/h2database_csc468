@@ -1,11 +1,7 @@
 package org.h2.mvstore.cache;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import java.lang.ref.WeakReference;
 
 /**
  * A cache segment
@@ -19,6 +15,9 @@ abstract class SegmentParent<V> {
     long maxMemory;
     int mask;
     int mapSize;
+
+    long misses;
+    long hits;
 
     /**
      * The map array. The size is always a power of 2.
@@ -57,25 +56,25 @@ abstract class SegmentParent<V> {
      *
      * @return 0 if no resizing is needed, or the new length
      */
-    int getNewMapLen() {
-        int len = mask + 1;
-        if (len * 3 < mapSize * 4 && len < (1 << 28)) {
-            // more than 75% usage
-            return len * 2;
-        } else if (len > 32 && len / 8 > mapSize) {
-            // less than 12% usage
-            return len / 2;
-        }
-        return 0;
-    }
+    // int getNewMapLen() {
+    //     int len = mask + 1;
+    //     if (len * 3 < mapSize * 4 && len < (1 << 28)) {
+    //         // more than 75% usage
+    //         return len * 2;
+    //     } else if (len > 32 && len / 8 > mapSize) {
+    //         // less than 12% usage
+    //         return len / 2;
+    //     }
+    //     return 0;
+    // }
 
-    void addToMap(Entry<V> e) {
-        int index = SegmentParent.getHash(e.key) & mask;
-        e.mapNext = entries[index];
-        entries[index] = e;
-        usedMemory += e.getMemory();
-        mapSize++;
-    }
+    // void addToMap(Entry<V> e) {
+    //     int index = SegmentParent.getHash(e.key) & mask;
+    //     e.mapNext = entries[index];
+    //     entries[index] = e;
+    //     usedMemory += e.getMemory();
+    //     mapSize++;
+    // }
 
     /**
      * Get the value from the given entry.
@@ -98,6 +97,8 @@ abstract class SegmentParent<V> {
         }
         return value;
     }
+
+    void access(Entry<V> e) {}
 
     /**
     * Access an item
@@ -154,7 +155,7 @@ abstract class SegmentParent<V> {
      * @param nonResident true for non-resident entries
      * @return the key list
      */
-    abstract List<Long> keys(boolean cold, boolean nonResident);
+    List<Long> keys() {return null;}
 
     /**
      * Get the set of keys for resident entries.

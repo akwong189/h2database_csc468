@@ -50,12 +50,6 @@ import org.h2.mvstore.DataUtils;
  * @param <V> the value type
  */
 class Segment<V> extends SegmentParent<V> {
-
-    /**
-     * The number of (hot, cold, and non-resident) entries in the map.
-     */
-    int mapSize;
-
     /**
      * The size of the LIRS queue for resident cold entries.
      */
@@ -65,16 +59,6 @@ class Segment<V> extends SegmentParent<V> {
      * The size of the LIRS queue for non-resident cold entries.
      */
     int queue2Size;
-
-    /**
-     * The number of cache hits.
-     */
-    long hits;
-
-    /**
-     * The number of cache misses.
-     */
-    long misses;
 
     /**
      * The map array. The size is always a power of 2.
@@ -230,26 +214,25 @@ class Segment<V> extends SegmentParent<V> {
      *
      * @return 0 if no resizing is needed, or the new length
      */
-    // int getNewMapLen() {
-    //     int len = mask + 1;
-    //     if (len * 3 < mapSize * 4 && len < (1 << 28)) {
-    //         // more than 75% usage
-    //         return len * 2;
-    //     } else if (len > 32 && len / 8 > mapSize) {
-    //         // less than 12% usage
-    //         return len / 2;
-    //     }
-    //     return 0;
-    // }
+    int getNewMapLen() {
+        int len = mask + 1;
+        if (len * 3 < mapSize * 4 && len < (1 << 28)) {
+            // more than 75% usage
+            return len * 2;
+        } else if (len > 32 && len / 8 > mapSize) {
+            // less than 12% usage
+            return len / 2;
+        }
+        return 0;
+    }
 
-    // @Override
-    // void addToMap(Entry<V> e) {
-    //     int index = SegmentParent.getHash(e.key) & mask;
-    //     e.mapNext = entries[index];
-    //     entries[index] = e;
-    //     usedMemory += e.getMemory();
-    //     mapSize++;
-    // }
+    void addToMap(Entry<V> e) {
+        int index = SegmentParent.getHash(e.key) & mask;
+        e.mapNext = entries[index];
+        entries[index] = e;
+        usedMemory += e.getMemory();
+        mapSize++;
+    }
 
     /**
      * Get the value from the given entry.
@@ -259,18 +242,18 @@ class Segment<V> extends SegmentParent<V> {
      * @param e the entry
      * @return the value, or null if there is no resident entry
      */
-    // synchronized V get(Entry<V> e) {
-    //     V value = e == null ? null : e.getValue();
-    //     if (value == null) {
-    //         // the entry was not found
-    //         // or it was a non-resident entry
-    //         misses++;
-    //     } else {
-    //         access(e);
-    //         hits++;
-    //     }
-    //     return value;
-    // }
+    synchronized V get(Entry<V> e) {
+        V value = e == null ? null : e.getValue();
+        if (value == null) {
+            // the entry was not found
+            // or it was a non-resident entry
+            misses++;
+        } else {
+            access(e);
+            hits++;
+        }
+        return value;
+    }
 
     /**
      * Access an item, moving the entry to the top of the stack or front of
@@ -278,7 +261,7 @@ class Segment<V> extends SegmentParent<V> {
      *
      * @param e entry to record access for
      */
-    private void access(Entry<V> e) {
+    void access(Entry<V> e) {
         if (e.isHot()) {
             if (e != stack.stackNext && e.stackNext != null) {
                 if (stackMoveCounter - e.topMove > stackMoveDistance) {

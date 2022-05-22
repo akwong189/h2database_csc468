@@ -44,6 +44,7 @@ public class TestCache extends TestDb implements CacheWriter {
     public void test() throws Exception {
         testMemoryUsage();
         testCache();
+        testRandomCache();
         testCacheDb(false);
         testCacheDb(true);
     }
@@ -111,6 +112,14 @@ public class TestCache extends TestDb implements CacheWriter {
             c.put(new Obj(i));
         }
         assertEquals("flush 0 flush 1 flush 2 flush 3 ", out);
+    }
+
+    private void testRandomCache() {
+        out = "";
+        Cache c = CacheLRU.getCache(this, "Random", 16);
+        for (int i = 0; i < 20; i++) {
+            c.put(new Obj(i));
+        }
     }
 
     /**

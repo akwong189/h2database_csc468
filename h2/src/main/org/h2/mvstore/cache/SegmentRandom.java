@@ -5,19 +5,15 @@
  */
 package org.h2.mvstore.cache;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Random;
 import java.util.Set;
-import org.h2.mvstore.DataUtils;
 
 class SegmentRandom<V> extends SegmentParent<V> {
 
-    long hits;
-    long misses;
+    Random rand;
 
     // long maxMemory;
     // int mask;
@@ -27,11 +23,14 @@ class SegmentRandom<V> extends SegmentParent<V> {
     // All are inheirited vars
 
 
-    SegmentRandom(long maxMemory, int len) {
+    SegmentRandom(long maxMemory, int stackMoveDistance, int len,
+                  int nonResidentQueueSize, int nonResidentQueueSizeHigh) {
         super(maxMemory, len);
+        rand = new Random();
     }
 
     SegmentRandom(Segment<V> old, int len) {
+        this(old.maxMemory, 0, len, 0, 0);
         hits = old.hits;
         misses = old.misses; 
     }
@@ -73,11 +72,22 @@ class SegmentRandom<V> extends SegmentParent<V> {
         e.mapNext = entries[index];
         entries[index] = e;
         usedMemory += memory;
-        // if (usedMemory > maxMemory) {
-        //     // Pick a random entry, remove
-        // }
+        if (usedMemory > maxMemory) {
+            evict();
+        }
         mapSize++;
         return old;
+    }
+
+    private void evict() {
+        do {
+            int randEntry = rand.nextInt(entries.length);
+            Entry<V> e = entries[randEntry];
+
+            entries[randEntry] = e.mapNext;
+            mapSize--;
+            usedMemory -= e.getMemory();
+        } while (usedMemory > maxMemory);
     }
 
     /**
@@ -90,6 +100,7 @@ class SegmentRandom<V> extends SegmentParent<V> {
     synchronized V remove(long key, int hash) {
         int index = hash & mask;
         Entry<V> e = entries[index];
+
         if (e == null) {
             return null;
         }
@@ -117,13 +128,13 @@ class SegmentRandom<V> extends SegmentParent<V> {
      * Get the list of keys. This method allows to read the internal state
      * of the cache.
      *
-     * @param cold if true, only keys for the cold entries are returned
-     * @param nonResident true for non-resident entries
      * @return the key list
      */
-    synchronized List<Long> keys(boolean cold, boolean nonResident) {
+    synchronized List<Long> keys() {
         ArrayList<Long> keys = new ArrayList<>();
-
+        for (Entry<V> e : entries) {
+            keys.add(e.key);
+        }
         return keys;
     }
 
@@ -134,7 +145,20 @@ class SegmentRandom<V> extends SegmentParent<V> {
      */
     synchronized Set<Long> keySet() { 
         HashSet<Long> set = new HashSet<>();
-        
+        for (Entry<V> e : entries) {
+            set.add(e.key);
+        }
         return set;
+    }
+
+    @Override
+    synchronized V get(Entry<V> e) {
+        V value = e == null ? null : e.getValue();
+        if (value == null) {
+            misses++;
+        } else {
+            hits++;
+        }
+        return value;
     }
 }

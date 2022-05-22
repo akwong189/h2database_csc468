@@ -88,7 +88,9 @@ public class CacheLRU implements Cache {
             cache = new CacheTQ(writer, cacheSize);
         } else if (cacheType.equals("FIFO")) {
             cache = new CacheLRU(writer, cacheSize, true);
-        } else { 
+        } else if (cacheType.equals("Random")) {
+            cache = new CacheRandom(writer, cacheSize);
+        } else {
             throw DbException.getInvalidValueException("CACHE_TYPE", cacheType);
         }
         if (secondLevel != null) {
@@ -156,22 +158,29 @@ public class CacheLRU implements Cache {
         int rc = recordCount;
         boolean flushed = false;
         CacheObject next = head.cacheNext;
+
         while (true) {
-            if (rc <= Constants.CACHE_MIN_RECORDS) {
+            // edge checks
+            if (rc <= Constants.CACHE_MIN_RECORDS) { // count has to be > min records
                 break;
             }
+
+            // if changed is empty
             if (changed.isEmpty()) {
+                // and memory is not greater than max memory, break out
                 if (mem <= maxMemory) {
                     break;
                 }
             } else {
+                // if memory * 3 is not greater than max memory * 3, break out
                 if (mem * 4 <= maxMemory * 3) {
                     break;
                 }
             }
-            CacheObject check = next;
-            next = check.cacheNext;
-            i++;
+
+            CacheObject check = next; // load the next cache block
+            next = check.cacheNext;   // prepare the next cache check
+            i++;                      // increase i
             if (i >= recordCount) {
                 if (!flushed) {
                     writer.flushLog();
@@ -198,21 +207,29 @@ public class CacheLRU implements Cache {
                 addToFront(check);
                 continue;
             }
-            rc--;
-            mem -= check.getMemory();
+
+            rc--; // decrement record count
+            mem -= check.getMemory(); // decrement memory
+
             if (check.isChanged()) {
                 changed.add(check);
             } else {
                 remove(check.getPos());
             }
         }
+
+        // have values that are removed
         if (!changed.isEmpty()) {
-            if (!flushed) {
+            if (!flushed) { // logging
                 writer.flushLog();
             }
+
+            // sort changed and init vars
             Collections.sort(changed);
             long max = maxMemory;
             int size = changed.size();
+
+            // log changed values
             try {
                 // temporary disable size checking,
                 // to avoid stack overflow
@@ -224,6 +241,8 @@ public class CacheLRU implements Cache {
             } finally {
                 maxMemory = max;
             }
+
+            // remove the records that were changed
             for (i = 0; i < size; i++) {
                 CacheObject rec = changed.get(i);
                 remove(rec.getPos());

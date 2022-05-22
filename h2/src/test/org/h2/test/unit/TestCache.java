@@ -14,12 +14,7 @@ import java.util.Random;
 import org.h2.message.Trace;
 import org.h2.test.TestBase;
 import org.h2.test.TestDb;
-import org.h2.util.Cache;
-import org.h2.util.CacheLRU;
-import org.h2.util.CacheObject;
-import org.h2.util.CacheWriter;
-import org.h2.util.StringUtils;
-import org.h2.util.Utils;
+import org.h2.util.*;
 import org.h2.value.Value;
 
 /**
@@ -45,6 +40,8 @@ public class TestCache extends TestDb implements CacheWriter {
         testMemoryUsage();
         testCache();
         testRandomCache();
+        testMRUCache();
+        testMRUCacheWithGet();
         testCacheDb(false);
         testCacheDb(true);
     }
@@ -109,7 +106,7 @@ public class TestCache extends TestDb implements CacheWriter {
         out = "";
         Cache c = CacheLRU.getCache(this, "LRU", 16);
         for (int i = 0; i < 20; i++) {
-            c.put(new Obj(i));
+            c.put(new Obj(i, i));
         }
         assertEquals("flush 0 flush 1 flush 2 flush 3 ", out);
     }
@@ -118,8 +115,32 @@ public class TestCache extends TestDb implements CacheWriter {
         out = "";
         Cache c = CacheLRU.getCache(this, "Random", 16);
         for (int i = 0; i < 20; i++) {
-            c.put(new Obj(i));
+            c.put(new Obj(i, i));
         }
+    }
+
+    private void testMRUCache() {
+        out = "";
+        Cache c = CacheLRU.getCache(this, "MRU", 16);
+        for (int i = 0; i < 20; i++) {
+            c.put(new Obj(i, i));
+        }
+        assertEquals("flush 15 flush 16 flush 17 flush 18 ", out);
+    }
+
+    private void testMRUCacheWithGet() {
+        out = "";
+        CacheMRU c = new CacheMRU(this, 16);
+        for (int i = 0; i < 14; i++) {
+            c.put(new Obj(i, i));
+        }
+
+        for (int i = 0; i < 5; i++) {
+            assertNotNull(c.get(i));
+            c.put(new Obj(i+14, i));
+        }
+
+        assertEquals("flush 2 flush 3 flush 4 ", out);
     }
 
     /**
@@ -127,8 +148,9 @@ public class TestCache extends TestDb implements CacheWriter {
      */
     static class Obj extends CacheObject {
 
-        Obj(int pos) {
+        Obj(int pos, int data) {
             setPos(pos);
+            setData(data);
         }
 
         @Override
@@ -148,7 +170,7 @@ public class TestCache extends TestDb implements CacheWriter {
 
         @Override
         public String toString() {
-            return "[" + getPos() + "]";
+            return "[" + getPos() + ", " + getData() + "]";
         }
 
     }

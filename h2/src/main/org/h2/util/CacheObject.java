@@ -12,6 +12,8 @@ import org.h2.message.DbException;
  */
 public abstract class CacheObject implements Comparable<CacheObject> {
 
+    public int data;
+
     /**
      * The previous element in the LRU linked list. If the previous element is
      * the head, then this element is the most recently used object.
@@ -56,6 +58,15 @@ public abstract class CacheObject implements Comparable<CacheObject> {
 
     public int getPos() {
         return pos;
+    }
+
+
+    public void setData(int data) {
+        this.data = data;
+    }
+
+    public int getData() {
+        return data;
     }
 
     /**

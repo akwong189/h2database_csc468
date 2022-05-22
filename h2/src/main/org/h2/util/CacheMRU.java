@@ -7,6 +7,7 @@ package org.h2.util;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 import org.h2.engine.Constants;
 import org.h2.engine.SysProperties;
 import org.h2.message.DbException;
@@ -40,7 +41,7 @@ public class CacheMRU implements Cache {
 	 */
 	private long memory;
 
-	CacheMRU(CacheWriter writer, int maxMemoryKb) {
+	public CacheMRU(CacheWriter writer, int maxMemoryKb) {
 		this.writer = writer;
 		this.setMaxMemory(maxMemoryKb);
 		try {
@@ -65,7 +66,7 @@ public class CacheMRU implements Cache {
 		values = null;
 		values = new CacheObject[len];
 		recordCount = 0;
-		memory = len * (long) Constants.MEMORY_POINTER;
+		memory = len * (long)Constants.MEMORY_POINTER;
 	}
 
 	@Override
@@ -77,14 +78,13 @@ public class CacheMRU implements Cache {
 				throw DbException.getInternalError("try to add a record twice at pos " + pos);
 			}
 		}
-
 		int index = rec.getPos() & mask;
 		rec.cacheChained = values[index];
 		values[index] = rec;
 		recordCount++;
 		memory += rec.getMemory();
+		removeMostRecentlyUsedIfRequired();
 		addToFront(rec);
-		removeNewIfRequired();
 	}
 
 	@Override
@@ -102,40 +102,43 @@ public class CacheMRU implements Cache {
 		return old;
 	}
 
-	private void removeNewIfRequired() {
+	private void removeMostRecentlyUsedIfRequired() {
 		// a small method, to allow inlining
 		if (memory >= maxMemory) {
-			removeNew();
+			removeMostRecentlyUsed();
 		}
 	}
 
-	// TODO cacheMRU: remove old needs to remove latest changed
-	private void removeNew() {
+	private void removeMostRecentlyUsed() {
 		int i = 0;
 		ArrayList<CacheObject> changed = new ArrayList<>();
 		long mem = memory;
 		int rc = recordCount;
 		boolean flushed = false;
-		CacheObject prev = head.cachePrevious;
+		CacheObject previous = head.cachePrevious;
 
 		while (true) {
-			if (rc <= Constants.CACHE_MIN_RECORDS) {
+			// edge checks
+			if (rc <= Constants.CACHE_MIN_RECORDS) { // count has to be > min records
 				break;
 			}
 
+			// if changed is empty
 			if (changed.isEmpty()) {
+				// and memory is not greater than max memory, break out
 				if (mem <= maxMemory) {
 					break;
 				}
 			} else {
+				// if memory * 3 is not greater than max memory * 3, break out
 				if (mem * 4 <= maxMemory * 3) {
 					break;
 				}
 			}
 
-			CacheObject check = prev;
-			prev = check.cachePrevious;
-			i++;
+			CacheObject check = previous; // load the next cache block
+			previous = check.cachePrevious;   // prepare the next cache check
+			i++;                      // increase i
 			if (i >= recordCount) {
 				if (!flushed) {
 					writer.flushLog();
@@ -159,25 +162,33 @@ public class CacheMRU implements Cache {
 			// also, can't write it if the record is pinned
 			if (!check.canRemove()) {
 				removeFromLinkedList(check);
-				addToBack(check);
+				addToFront(check);
 				continue;
 			}
-			rc--;
-			mem -= check.getMemory();
+
+			rc--; // decrement record count
+			mem -= check.getMemory(); // decrement memory
+
 			if (check.isChanged()) {
 				changed.add(check);
+//				System.out.printf("Removed %d\n", check.getData());
 			} else {
 				remove(check.getPos());
 			}
 		}
 
+		// have values that are removed
 		if (!changed.isEmpty()) {
-			if (!flushed) {
+			if (!flushed) { // logging
 				writer.flushLog();
 			}
+
+			// sort changed and init vars
 			Collections.sort(changed);
 			long max = maxMemory;
 			int size = changed.size();
+
+			// log changed values
 			try {
 				// temporary disable size checking,
 				// to avoid stack overflow
@@ -189,6 +200,8 @@ public class CacheMRU implements Cache {
 			} finally {
 				maxMemory = max;
 			}
+
+			// remove the records that were changed
 			for (i = 0; i < size; i++) {
 				CacheObject rec = changed.get(i);
 				remove(rec.getPos());
@@ -203,21 +216,11 @@ public class CacheMRU implements Cache {
 		if (rec == head) {
 			throw DbException.getInternalError("try to move head");
 		}
+//		System.out.printf("Added %d\n", rec.getData());
 		rec.cacheNext = head;
 		rec.cachePrevious = head.cachePrevious;
 		rec.cachePrevious.cacheNext = rec;
 		head.cachePrevious = rec;
-	}
-
-	private void addToBack(CacheObject rec) {
-		if (rec == head) {
-			throw DbException.getInternalError("try to move head");
-		}
-
-		rec.cacheNext = head.cacheNext;
-		rec.cachePrevious = head;
-		rec.cacheNext.cachePrevious = rec;
-		head.cacheNext = rec;
 	}
 
 	private void removeFromLinkedList(CacheObject rec) {
@@ -232,16 +235,13 @@ public class CacheMRU implements Cache {
 		rec.cachePrevious = null;
 	}
 
-	// TODO cacheMRU: change how data is removed
 	@Override
 	public boolean remove(int pos) {
 		int index = pos & mask;
 		CacheObject rec = values[index];
-
 		if (rec == null) {
 			return false;
 		}
-
 		if (rec.getPos() == pos) {
 			values[index] = rec.cacheChained;
 		} else {
@@ -255,7 +255,6 @@ public class CacheMRU implements Cache {
 			} while (rec.getPos() != pos);
 			last.cacheChained = rec.cacheChained;
 		}
-
 		recordCount--;
 		memory -= rec.getMemory();
 		removeFromLinkedList(rec);
@@ -282,17 +281,19 @@ public class CacheMRU implements Cache {
 	public CacheObject get(int pos) {
 		CacheObject rec = find(pos);
 		if (rec != null) {
+//			System.out.printf("Retrieved %d\n", rec.getData());
 			removeFromLinkedList(rec);
 			addToFront(rec);
 		}
 		return rec;
 	}
-
 	@Override
 	public ArrayList<CacheObject> getAllChanged() {
+		// if(Database.CHECK) {
+		// testConsistency();
+		// }
 		ArrayList<CacheObject> list = new ArrayList<>();
 		CacheObject rec = head.cacheNext;
-
 		while (rec != head) {
 			if (rec.isChanged()) {
 				list.add(rec);
@@ -306,9 +307,9 @@ public class CacheMRU implements Cache {
 	public void setMaxMemory(int maxKb) {
 		long newSize = maxKb * 1024L / 4;
 		maxMemory = newSize < 0 ? 0 : newSize;
-
-		// can not resize, otherwise existing records are lost resize(maxSize);
-		removeNewIfRequired();
+		// can not resize, otherwise existing records are lost
+		// resize(maxSize);
+		removeMostRecentlyUsedIfRequired();
 	}
 
 	@Override
@@ -318,6 +319,12 @@ public class CacheMRU implements Cache {
 
 	@Override
 	public int getMemory() {
+		// CacheObject rec = head.cacheNext;
+		// while (rec != head) {
+		// System.out.println(rec.getMemory() + " " +
+		// MemoryFootprint.getObjectSize(rec) + " " + rec);
+		// rec = rec.cacheNext;
+		// }
 		return (int) (memory * 4L / 1024);
 	}
 

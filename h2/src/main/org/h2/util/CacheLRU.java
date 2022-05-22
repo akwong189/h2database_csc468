@@ -90,6 +90,8 @@ public class CacheLRU implements Cache {
             cache = new CacheLRU(writer, cacheSize, true);
         } else if (cacheType.equals("Random")) {
             cache = new CacheRandom(writer, cacheSize);
+        }  else if (cacheType.equals("MRU")) {
+            cache = new CacheMRU(writer, cacheSize);
         } else {
             throw DbException.getInvalidValueException("CACHE_TYPE", cacheType);
         }

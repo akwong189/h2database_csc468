@@ -253,6 +253,8 @@ public class CacheLRU implements Cache {
                 }
             }
         }
+
+        memory = mem;
     }
 
     private void addToFront(CacheObject rec) {

@@ -13,6 +13,7 @@ import org.h2.message.DbException;
 public abstract class CacheObject implements Comparable<CacheObject> {
 
     public int data;
+    private boolean read;
 
     /**
      * The previous element in the LRU linked list. If the previous element is
@@ -92,4 +93,11 @@ public abstract class CacheObject implements Comparable<CacheObject> {
         return false;
     }
 
+    public boolean beenRead() {
+        if (read) {
+            return true;
+        }
+        read = true;
+        return false;
+    }
 }

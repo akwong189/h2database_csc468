@@ -94,13 +94,16 @@ public class CacheRandom implements Cache {
             }
         }
 
+//        System.out.println(r.getMemory() + " + " + memory + " = " + (r.getMemory() + memory));
+        memory += r.getMemory();
+        removeRandomIfRequired();
+
         int index = r.getPos() & mask;
         r.cacheChained = values[index];
         values[index] = r;
         recordCount++;
-        memory += r.getMemory();
         addToFront(r);
-        removeRandomIfRequired();
+//        System.out.println(recordCount);
     }
 
     @Override
@@ -177,6 +180,7 @@ public class CacheRandom implements Cache {
 
     private void removeRandomIfRequired() {
         if (memory >= maxMemory) {
+//            System.out.printf("Removing random records as %d > %d\n", memory, maxMemory);
             removeRandom();
         }
     }
@@ -201,11 +205,15 @@ public class CacheRandom implements Cache {
         long mem = memory;
         int rc = recordCount;
         boolean flushed = false;
-        CacheObject check = getRandomCache(rc);
 
         while (true) {
+            CacheObject check = getRandomCache(rc);
+            if (changed.contains(check))
+                continue;
+
             // edge checks
             if (rc <= Constants.CACHE_MIN_RECORDS) { // count has to be > min records
+//                System.out.println("rc <= cache min records " + Constants.CACHE_MIN_RECORDS);
                 break;
             }
 
@@ -213,11 +221,13 @@ public class CacheRandom implements Cache {
             if (changed.isEmpty()) {
                 // and memory is not greater than max memory, break out
                 if (mem <= maxMemory) {
+//                    System.out.printf("%d <= %d\n", mem, maxMemory);
                     break;
                 }
             } else {
                 // if memory * 3 is not greater than max memory * 3, break out
                 if (mem * 4 <= maxMemory * 3) {
+//                    System.out.println("mult: " + (mem * 4) + " <= " + (maxMemory * 3));
                     break;
                 }
             }
@@ -241,11 +251,15 @@ public class CacheRandom implements Cache {
             if (check == head) {
                 throw DbException.getInternalError("try to remove head");
             }
+
             if (!check.canRemove()) {
                 continue;
             }
+
             rc--; // decrement record count
             mem -= check.getMemory(); // decrement memory
+//            System.out.println(mem);
+
             if (check.isChanged()) {
                 changed.add(check);
             } else {
@@ -286,6 +300,8 @@ public class CacheRandom implements Cache {
                 }
             }
         }
+
+//        System.out.printf("Result = %d\n", memory);
     }
 
     private void removeFromLinkedList(CacheObject rec) {

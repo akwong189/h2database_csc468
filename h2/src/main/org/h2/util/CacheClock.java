@@ -18,6 +18,8 @@ public class CacheClock implements Cache {
     private CacheObject[] values;
     private int recordCount;
 
+    private CacheObject pointer;
+
     /**
      * The number of cache buckets.
      */
@@ -36,6 +38,7 @@ public class CacheClock implements Cache {
     CacheClock(CacheWriter writer, int maxMemoryKb) {
         this.writer = writer;
         this.setMaxMemory(maxMemoryKb);
+        this.pointer = head;
 
         try {
             // Since setMaxMemory() ensures that maxMemory is >=0,
@@ -96,7 +99,7 @@ public class CacheClock implements Cache {
         recordCount++;
         memory += r.getMemory();
         addToFront(r);
-        removeRandomIfRequired();
+        removeClockIfRequired();
     }
 
     @Override
@@ -158,7 +161,7 @@ public class CacheClock implements Cache {
     public void setMaxMemory(int size) {
         long newSize = size * 1024L / 4;
         maxMemory = newSize < 0 ? 0 : newSize;
-        removeRandomIfRequired();
+        removeClockIfRequired();
     }
 
     @Override
@@ -171,34 +174,19 @@ public class CacheClock implements Cache {
         return (int) (memory * 4L / 1024);
     }
 
-    private void removeRandomIfRequired() {
+    private void removeClockIfRequired() {
         if (memory >= maxMemory) {
-            removeRandom();
+            removeClock();
         }
     }
 
-    private CacheObject getRandomCache(int recordCount) {
-//        int index = rand.nextInt(recordCount);
-        int index = 10;
-        CacheObject remove = head;
-
-        for (int i = 0; i < index; ++i) {
-            remove = remove.cacheNext;
-        }
-
-        if (remove == head) {
-            remove = remove.cacheNext;
-        }
-        return remove;
-    }
-
-    private void removeRandom() {
+    private void removeClock() {
         int i = 0;
         ArrayList<CacheObject> changed = new ArrayList<>();
         long mem = memory;
         int rc = recordCount;
         boolean flushed = false;
-        CacheObject check = getRandomCache(rc);
+        CacheObject check = pointer;
 
         while (true) {
             // edge checks

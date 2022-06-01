@@ -38,10 +38,11 @@ public class TestCache extends TestDb implements CacheWriter {
     @Override
     public void test() throws Exception {
         testMemoryUsage();
-        testCache();
-        testRandomCache();
-        testMRUCache();
-        testMRUCacheWithGet();
+//        testCache();
+//        testRandomCache();
+        testLargerRandomCache();
+//        testMRUCache();
+//        testMRUCacheWithGet();
         testCacheDb(false);
         testCacheDb(true);
     }
@@ -119,6 +120,16 @@ public class TestCache extends TestDb implements CacheWriter {
         }
     }
 
+    private void testLargerRandomCache() {
+        out = "";
+        Cache c = CacheLRU.getCache(this, "Random", 16);
+        for (int i = 0; i < 100; i++) {
+            c.put(new Obj(i, i));
+        }
+        c.put(new Obj(100, 100, 2048));
+        System.out.println(out);
+    }
+
     private void testMRUCache() {
         out = "";
         Cache c = CacheLRU.getCache(this, "MRU", 16);
@@ -147,15 +158,21 @@ public class TestCache extends TestDb implements CacheWriter {
      * A simple cache object
      */
     static class Obj extends CacheObject {
+        private int memory;
 
         Obj(int pos, int data) {
+            this(pos, data, 128);
+        }
+
+        Obj(int pos, int data, int memory) {
             setPos(pos);
             setData(data);
+            this.memory = memory;
         }
 
         @Override
         public int getMemory() {
-            return 1024;
+            return memory;
         }
 
         @Override

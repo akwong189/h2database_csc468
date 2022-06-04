@@ -112,7 +112,14 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         int toDelete = 0;
         int toUpdate = 0;
 
-        for (int i = 0; i < 99999; i++) {
+        // Fill table
+        for (int i = 0; i < 10000; i++) {
+            toInsert = rand.nextInt(100000000);
+            statement = "insert into test (id) values (" + Integer.toString(toInsert) + ");";
+            inTest.add(toInsert);
+        }
+
+        for (int i = 0; i < 1000; i++) {
             sqlStatement = rand.nextInt(50);
             
             if (sqlStatement > 45 && inTest.size() > 0) {
@@ -137,6 +144,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
             else {
                 toInsert = rand.nextInt(100000000);
                 statement = "insert into test (id) values (" + Integer.toString(toInsert) + ");";
+                inTest.add(toInsert);
             }
             stat.execute(statement);
         }

@@ -5,6 +5,14 @@
  */
 package org.h2.test.unit;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Random;
+
 import org.h2.message.Trace;
 import org.h2.test.TestBase;
 import org.h2.test.TestDb;
@@ -34,10 +42,68 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         testClockCache();
     }
 
-    private static long getRealMemory() {
+    private static long getRealMemory(){
         StringUtils.clearCache();
         Value.clearCache();
         return Utils.getMemoryUsed();
+    }
+
+    private void runStatements() throws SQLException {
+        Connection conn;
+        Statement stat;
+        ResultSet rs;
+        conn = getConnection("cache;CACHE_SIZE=16384");
+        stat = conn.createStatement();
+        // test DataOverflow
+        stat.execute("create table test(id int)");
+        stat.execute("set max_memory_undo 10000");
+
+        ArrayList<Integer> inTest = new ArrayList<>(10000);
+
+        String statement = "";
+        Random rand = new Random();
+
+        int sqlStatement = rand.nextInt(3);
+        int toInsert = 0;
+        int toDelete = 0;
+        int toUpdate = 0;
+
+        // Fill table
+        for (int i = 0; i < 10000; i++) {
+            toInsert = rand.nextInt(100000000);
+            statement = "insert into test (id) values (" + Integer.toString(toInsert) + ");";
+            inTest.add(toInsert);
+        }
+
+        for (int i = 0; i < 1000; i++) {
+            sqlStatement = rand.nextInt(50);
+            
+            if (sqlStatement > 45 && inTest.size() > 0) {
+                toInsert = rand.nextInt(inTest.size()); // Reusing variable name here, just a random index
+                toDelete = inTest.get(toInsert);
+                inTest.remove(toDelete);
+                statement = "delete from test where id = " + Integer.toString(toDelete); // Can maybe cause error if deletes too many
+            }
+            else if (sqlStatement > 40) {
+                toInsert = rand.nextInt(inTest.size()); // Reusing variable name here, just a random index
+                toUpdate = inTest.get(toInsert);
+                toInsert = rand.nextInt(100000000); 
+                statement = "update test set id = " + Integer.toString(toInsert) + " where id = " + Integer.toString(toUpdate);
+                
+                for (int j = 0; j < inTest.size(); j++) { // Change array
+                    if (inTest.get(j) == toUpdate) {
+                        inTest.set(j, toInsert);
+                    }
+                }
+
+            }
+            else {
+                toInsert = rand.nextInt(100000000);
+                statement = "insert into test (id) values (" + Integer.toString(toInsert) + ");";
+                inTest.add(toInsert);
+            }
+            stat.execute(statement);
+        }
     }
 
     private void testCache() {

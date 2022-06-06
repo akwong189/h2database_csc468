@@ -38,7 +38,7 @@ public class TestCache extends TestDb implements CacheWriter {
     @Override
     public void test() throws Exception {
         testMemoryUsage();
-//        testCache();
+        testCache();
 //        testRandomCache();
         testLargerRandomCache();
 //        testMRUCache();
@@ -107,7 +107,7 @@ public class TestCache extends TestDb implements CacheWriter {
         out = "";
         Cache c = CacheLRU.getCache(this, "LRU", 16);
         for (int i = 0; i < 20; i++) {
-            c.put(new Obj(i, i));
+            c.put(new Obj(i, i, 1024));
         }
         assertEquals("flush 0 flush 1 flush 2 flush 3 ", out);
     }

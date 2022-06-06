@@ -35,7 +35,7 @@ public class CacheClock implements Cache {
      */
     private long memory;
 
-    CacheClock(CacheWriter writer, int maxMemoryKb) {
+    public CacheClock(CacheWriter writer, int maxMemoryKb) {
         this.writer = writer;
         this.setMaxMemory(maxMemoryKb);
         this.pointer = head;
@@ -93,13 +93,14 @@ public class CacheClock implements Cache {
             }
         }
 
+        removeClockIfRequired();
+        memory += r.getMemory();
+
         int index = r.getPos() & mask;
         r.cacheChained = values[index];
         values[index] = r;
         recordCount++;
-        memory += r.getMemory();
         addToFront(r);
-        removeClockIfRequired();
     }
 
     @Override
@@ -223,12 +224,30 @@ public class CacheClock implements Cache {
                     break;
                 }
             }
+
+            // ignore head
             if (check == head) {
-                throw DbException.getInternalError("try to remove head");
+//                throw DbException.getInternalError("try to remove head");
+                check = head.cacheNext;
+                continue;
             }
+
+            // check if it can be removed
             if (!check.canRemove()) {
                 continue;
             }
+
+            // check if the block has been read, if not ignore and set to read
+            if (!check.beenRead()) {
+                System.out.println(check + " has now been read");
+                continue;
+            }
+
+            // ensure that the record has been read and can move to the next value
+            if (changed.contains(check)) {
+                continue;
+            }
+
             rc--; // decrement record count
             mem -= check.getMemory(); // decrement memory
             if (check.isChanged()) {
@@ -236,6 +255,8 @@ public class CacheClock implements Cache {
             } else {
                 remove(check.getPos());
             }
+
+            check = check.cacheNext;
         }
 
         // have values that are removed

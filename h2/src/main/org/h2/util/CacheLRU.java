@@ -75,7 +75,7 @@ public class CacheLRU implements Cache {
      * @return the cache object
      */
     public static Cache getCache(CacheWriter writer, String cacheType,
-            int cacheSize) {
+                                 int cacheSize) {
         Map<Integer, CacheObject> secondLevel = null;
         if (cacheType.startsWith("SOFT_")) {
             secondLevel = new SoftValuesHashMap<>();
@@ -83,17 +83,22 @@ public class CacheLRU implements Cache {
         }
         Cache cache;
         if (CacheLRU.TYPE_NAME.equals(cacheType)) {
+//            System.out.println("Is LRU");
             cache = new CacheLRU(writer, cacheSize, false);
         } else if (CacheTQ.TYPE_NAME.equals(cacheType)) {
             cache = new CacheTQ(writer, cacheSize);
         } else if (cacheType.equals("FIFO")) {
+//            System.out.println("Is FIFO");
             cache = new CacheLRU(writer, cacheSize, true);
         } else if (cacheType.equals("Random")) {
+//            System.out.println("Is Random");
             cache = new CacheRandom(writer, cacheSize);
         }  else if (cacheType.equals("MRU")) {
+//            System.out.println("Is MRU");
             cache = new CacheMRU(writer, cacheSize);
         } else if (cacheType.equals("LIFO")) {
-            cache = new CacheLIFO(writer, cacheSize, true);
+//            System.out.println("Is LIFO");
+            cache = new CacheLIFO(writer, cacheSize);
         } else {
             throw DbException.getInvalidValueException("CACHE_TYPE", cacheType);
         }
@@ -162,29 +167,22 @@ public class CacheLRU implements Cache {
         int rc = recordCount;
         boolean flushed = false;
         CacheObject next = head.cacheNext;
-
         while (true) {
-            // edge checks
-            if (rc <= Constants.CACHE_MIN_RECORDS) { // count has to be > min records
+            if (rc <= Constants.CACHE_MIN_RECORDS) {
                 break;
             }
-
-            // if changed is empty
             if (changed.isEmpty()) {
-                // and memory is not greater than max memory, break out
                 if (mem <= maxMemory) {
                     break;
                 }
             } else {
-                // if memory * 3 is not greater than max memory * 3, break out
                 if (mem * 4 <= maxMemory * 3) {
                     break;
                 }
             }
-
-            CacheObject check = next; // load the next cache block
-            next = check.cacheNext;   // prepare the next cache check
-            i++;                      // increase i
+            CacheObject check = next;
+            next = check.cacheNext;
+            i++;
             if (i >= recordCount) {
                 if (!flushed) {
                     writer.flushLog();
@@ -211,29 +209,21 @@ public class CacheLRU implements Cache {
                 addToFront(check);
                 continue;
             }
-
-            rc--; // decrement record count
-            mem -= check.getMemory(); // decrement memory
-
+            rc--;
+            mem -= check.getMemory();
             if (check.isChanged()) {
                 changed.add(check);
             } else {
                 remove(check.getPos());
             }
         }
-
-        // have values that are removed
         if (!changed.isEmpty()) {
-            if (!flushed) { // logging
+            if (!flushed) {
                 writer.flushLog();
             }
-
-            // sort changed and init vars
             Collections.sort(changed);
             long max = maxMemory;
             int size = changed.size();
-
-            // log changed values
             try {
                 // temporary disable size checking,
                 // to avoid stack overflow
@@ -245,8 +235,6 @@ public class CacheLRU implements Cache {
             } finally {
                 maxMemory = max;
             }
-
-            // remove the records that were changed
             for (i = 0; i < size; i++) {
                 CacheObject rec = changed.get(i);
                 remove(rec.getPos());
@@ -255,8 +243,6 @@ public class CacheLRU implements Cache {
                 }
             }
         }
-
-        memory = mem;
     }
 
     private void addToFront(CacheObject rec) {

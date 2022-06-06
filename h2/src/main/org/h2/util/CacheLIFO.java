@@ -192,6 +192,7 @@ public class CacheLIFO implements Cache {
 				}
 			}
 
+			CacheObject check = last;
 			i++;                      // increase i
 			if (i >= recordCount) {
 				if (!flushed) {
@@ -310,7 +311,7 @@ public class CacheLIFO implements Cache {
 		maxMemory = newSize < 0 ? 0 : newSize;
 		// can not resize, otherwise existing records are lost
 		// resize(maxSize);
-		removeMostRecentlyUsedIfRequired();
+//		removeMostRecentlyUsedIfRequired();
 	}
 
 	@Override

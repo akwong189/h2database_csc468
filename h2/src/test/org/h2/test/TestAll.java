@@ -470,6 +470,14 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
                 new TestTimer().runTest(test);
             } else if ("cache".equals(args[0])) {
                 new TestCacheLarge().runTest(test);
+            } else if ("benchmark".equals(args[0])) {
+                BenchmarkCache benchmark = new BenchmarkCache();
+                benchmark.runMultipleBenchmark("LRU", 10000, 5);
+                benchmark.runMultipleBenchmark("MRU", 10000, 5);
+                benchmark.runMultipleBenchmark("FIFO", 10000, 5);
+                benchmark.runMultipleBenchmark("LIFO", 10000, 5);
+                benchmark.runMultipleBenchmark("Random", 10000, 5);
+                benchmark.runMultipleBenchmark("Clock", 10000, 5);
             }
         } else {
             test.testAll(args, 0);

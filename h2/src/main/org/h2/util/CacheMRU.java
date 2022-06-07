@@ -78,12 +78,13 @@ public class CacheMRU implements Cache {
 				throw DbException.getInternalError("try to add a record twice at pos " + pos);
 			}
 		}
+		memory += rec.getMemory();
+		removeMostRecentlyUsedIfRequired();
+
 		int index = rec.getPos() & mask;
 		rec.cacheChained = values[index];
 		values[index] = rec;
 		recordCount++;
-		memory += rec.getMemory();
-		removeMostRecentlyUsedIfRequired();
 		addToFront(rec);
 	}
 

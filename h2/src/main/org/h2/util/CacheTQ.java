@@ -130,4 +130,7 @@ public class CacheTQ implements Cache {
         return fifo.update(pos, record);
     }
 
+    public String toString() {
+        return TYPE_NAME;
+    }
 }

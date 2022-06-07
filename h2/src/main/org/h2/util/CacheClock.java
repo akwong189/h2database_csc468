@@ -18,7 +18,7 @@ public class CacheClock implements Cache {
     private CacheObject[] values;
     private int recordCount;
 
-    private CacheObject pointer;
+    private CacheObject pointer = head;
 
     /**
      * The number of cache buckets.
@@ -80,7 +80,9 @@ public class CacheClock implements Cache {
 
     @Override
     public CacheObject get(int pos) {
-        return find(pos);
+        CacheObject rec = find(pos);
+        if (rec != null) rec.referenced();
+        return rec;
     }
 
     @Override
@@ -93,6 +95,7 @@ public class CacheClock implements Cache {
             }
         }
 
+        r.referenced();
         removeClockIfRequired();
         memory += r.getMemory();
 
@@ -101,6 +104,7 @@ public class CacheClock implements Cache {
         values[index] = r;
         recordCount++;
         addToFront(r);
+//        System.out.println("Inserted " + r);
     }
 
     @Override
@@ -112,6 +116,7 @@ public class CacheClock implements Cache {
             if (old != record) {
                 throw DbException.getInternalError("old!=record pos:" + pos + " old:" + old + " new:" + record);
             }
+            record.referenced();
         }
         return old;
     }
@@ -136,6 +141,11 @@ public class CacheClock implements Cache {
             } while (rec.getPos() != pos);
             last.cacheChained = rec.cacheChained;
         }
+
+        if (pointer == rec) {
+            pointer = rec.cacheNext;
+        }
+
         recordCount--;
         memory -= rec.getMemory();
         removeFromLinkedList(rec);
@@ -187,9 +197,18 @@ public class CacheClock implements Cache {
         long mem = memory;
         int rc = recordCount;
         boolean flushed = false;
-        CacheObject check = pointer;
+
+//        System.out.println(memory + " Max: " + maxMemory);
+
+        CacheObject prev = pointer;
 
         while (true) {
+            prev = pointer;
+            pointer = pointer.cacheNext;
+            if (pointer == null) {
+                System.out.println(prev);
+            }
+
             // edge checks
             if (rc <= Constants.CACHE_MIN_RECORDS) { // count has to be > min records
                 break;
@@ -198,7 +217,7 @@ public class CacheClock implements Cache {
             // if changed is empty
             if (changed.isEmpty()) {
                 // and memory is not greater than max memory, break out
-                if (mem <= maxMemory) {
+                if (mem < maxMemory) {
                     break;
                 }
             } else {
@@ -226,37 +245,35 @@ public class CacheClock implements Cache {
             }
 
             // ignore head
-            if (check == head) {
+            if (pointer == head) {
 //                throw DbException.getInternalError("try to remove head");
-                check = head.cacheNext;
                 continue;
             }
 
             // check if it can be removed
-            if (!check.canRemove()) {
+            if (!pointer.canRemove()) {
                 continue;
             }
 
             // check if the block has been read, if not ignore and set to read
-            if (!check.beenRead()) {
-                System.out.println(check + " has now been read");
+            if (!pointer.beenRead()) {
+//                System.out.println(check + " has now been read");
                 continue;
             }
 
             // ensure that the record has been read and can move to the next value
-            if (changed.contains(check)) {
+            if (changed.contains(pointer)) {
                 continue;
             }
 
+//            System.out.println("Removing " + check);
             rc--; // decrement record count
-            mem -= check.getMemory(); // decrement memory
-            if (check.isChanged()) {
-                changed.add(check);
+            mem -= pointer.getMemory(); // decrement memory
+            if (pointer.isChanged()) {
+                changed.add(pointer);
             } else {
-                remove(check.getPos());
+                remove(pointer.getPos());
             }
-
-            check = check.cacheNext;
         }
 
         // have values that are removed
@@ -314,5 +331,9 @@ public class CacheClock implements Cache {
         rec.cachePrevious = head.cachePrevious;
         rec.cachePrevious.cacheNext = rec;
         head.cachePrevious = rec;
+    }
+
+    public String toString() {
+        return TYPE_NAME;
     }
 }

@@ -40,12 +40,76 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         testMRUCache();
         testMRUCacheWithGet();
         testClockCache();
+        testLIFOCache();
+
+//        runMultipleBenchmark("Random", 10000, 5);
+//        runMultipleBenchmark("LRU", 10000, 5);
+//        runMultipleBenchmark("FIFO", 10000, 5);
+//        runMultipleBenchmark("MRU", 10000, 5);
+//        runMultipleBenchmark("Clock", 10000, 5);
+        runMultipleBenchmark("LIFO", 10000, 5);
     }
 
     private static long getRealMemory(){
         StringUtils.clearCache();
         Value.clearCache();
         return Utils.getMemoryUsed();
+    }
+
+    private void runMultipleBenchmark(String cacheType, int size, int runs) {
+        long times = 0;
+        for (int i = 0; i < runs; i++) {
+            times += runBenchmark(CacheLRU.getCache(this, cacheType, 400), size);
+        }
+        System.out.println(cacheType + " average run time is " + (times/runs) + "ms");
+    }
+
+    private long runBenchmark(Cache cache, int size) {
+        Random randOperation = new Random(0);
+        Random randIndex = new Random(1);
+        Random randValue = new Random(2);
+        ArrayList<Obj> objects = new ArrayList<>();
+
+        for (int i = 0; i < size; i++) {
+            objects.add(new Obj(i, i, 1024));
+        }
+
+        // initialize all the first 16 objects in the cache
+        for (int index = 0; index < 16; index++) {
+            cache.put(objects.get(index));
+        }
+
+        long startTime = System.currentTimeMillis();
+        for (long i = 0; i < 100000L; ++i) {
+            int operation = randOperation.nextInt(4);
+            switch (operation) {
+                case 0: // perform a put
+                    try {
+                        cache.put(objects.get(randIndex.nextInt(size)));
+                    } catch (Exception e){
+                        break;
+                    }
+                    break;
+                case 1: // perform a get
+                    cache.get(randIndex.nextInt(size));
+                    break;
+                case 2: // perform an update
+                    int updateIndex = randIndex.nextInt(size);
+                    CacheObject updateObj = objects.get(updateIndex);
+                    updateObj.setData(randValue.nextInt(100));
+                    cache.update(updateIndex, updateObj);
+                    break;
+                case 3: // perform a remove
+                    int removedIndex = randIndex.nextInt(size);
+                    cache.remove(removedIndex);
+                    break;
+            }
+        }
+        long endTime = System.currentTimeMillis();
+        long duration = (endTime - startTime);
+
+        System.out.println(cache + " took " + duration + "ms to complete");
+        return duration;
     }
 
     private void runStatements() throws SQLException {
@@ -110,7 +174,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         out = "";
         Cache c = CacheLRU.getCache(this, "LRU", 16);
         for (int i = 0; i < 20; i++) {
-            c.put(new TestCache.Obj(i, i, 1024));
+            c.put(new Obj(i, i, 1024));
         }
         assertEquals("flush 0 flush 1 flush 2 flush 3 ", out);
     }
@@ -119,7 +183,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         out = "";
         Cache c = CacheLRU.getCache(this, "Random", 16);
         for (int i = 0; i < 20; i++) {
-            c.put(new TestCache.Obj(i, i));
+            c.put(new Obj(i, i));
         }
     }
 
@@ -127,9 +191,9 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         out = "";
         Cache c = CacheLRU.getCache(this, "Random", 16);
         for (int i = 0; i < 100; i++) {
-            c.put(new TestCache.Obj(i, i));
+            c.put(new Obj(i, i));
         }
-        c.put(new TestCache.Obj(100, 100, 2048));
+        c.put(new Obj(100, 100, 2048));
         System.out.println(out);
     }
 
@@ -137,7 +201,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         out = "";
         Cache c = CacheLRU.getCache(this, "MRU", 16);
         for (int i = 0; i < 20; i++) {
-            c.put(new TestCache.Obj(i, i, 1024));
+            c.put(new Obj(i, i, 1024));
         }
         assertEquals("flush 15 flush 16 flush 17 flush 18 ", out);
     }
@@ -146,12 +210,12 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         out = "";
         Cache c = new CacheMRU(this, 16);
         for (int i = 0; i < 14; i++) {
-            c.put(new TestCache.Obj(i, i, 1024));
+            c.put(new Obj(i, i, 1024));
         }
 
         for (int i = 0; i < 5; i++) {
             assertNotNull(c.get(i));
-            c.put(new TestCache.Obj(i+14, i, 1024));
+            c.put(new Obj(i+14, i, 1024));
         }
 
         assertEquals("flush 2 flush 3 flush 4 ", out);
@@ -160,10 +224,19 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
     private void testClockCache() {
         out = "";
         Cache c = new CacheClock(this, 16);
-        for (int i = 0; i < 20; i++) {
-            c.put(new TestCache.Obj(i, i, 1024));
+        for (int i = 0; i < 30; i++) {
+            c.put(new Obj(i, i, 128));
         }
-        assertEquals("flush 0 flush 1 flush 2 flush 3 ", out);
+        assertEquals("flush 0 1 2 3 4 5 6 7 ", out);
+    }
+
+    private void testLIFOCache() {
+        out = "";
+        Cache c = new CacheLIFO(this, 16);
+        for (int i = 0; i < 30; i++) {
+            c.put(new Obj(i, i, 128));
+        }
+        assertEquals("flush 19 20 21 22 23 24 25 26 27 ", out);
     }
 
     /**

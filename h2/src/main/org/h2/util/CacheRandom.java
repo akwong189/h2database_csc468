@@ -36,7 +36,7 @@ public class CacheRandom implements Cache {
 
     private final Random rand;
 
-    CacheRandom(CacheWriter writer, int maxMemoryKb) {
+    public CacheRandom(CacheWriter writer, int maxMemoryKb) {
         this.writer = writer;
         this.rand = new Random();
         this.setMaxMemory(maxMemoryKb);
@@ -115,6 +115,8 @@ public class CacheRandom implements Cache {
             if (old != record) {
                 throw DbException.getInternalError("old!=record pos:" + pos + " old:" + old + " new:" + record);
             }
+            removeFromLinkedList(record);
+            addToFront(record);
         }
         return old;
     }
@@ -324,5 +326,9 @@ public class CacheRandom implements Cache {
         rec.cachePrevious = head.cachePrevious;
         rec.cachePrevious.cacheNext = rec;
         head.cachePrevious = rec;
+    }
+
+    public String toString() {
+        return TYPE_NAME;
     }
 }

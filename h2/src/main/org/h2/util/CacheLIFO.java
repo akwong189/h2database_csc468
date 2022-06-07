@@ -41,14 +41,6 @@ public class CacheLIFO implements Cache {
 	 */
 	private long memory;
 
-
-	// Linked list to keep track of when entries were added
-	// private CacheObject[] lifoTracker;
-	private ArrayList<CacheObject> lifoTracker; // maybe add static if doesn't work
-
-	// Keep track of tail/last entry, in order to pop it
-	private int tail;
-
 	public CacheLIFO(CacheWriter writer, int maxMemoryKb) {
 		this.writer = writer;
 		this.setMaxMemory(maxMemoryKb);
@@ -73,20 +65,13 @@ public class CacheLIFO implements Cache {
 		// first set to null - avoiding out of memory
 		values = null;
 		values = new CacheObject[len];
-		lifoTracker = new ArrayList<CacheObject>(len); // Hopefully clear() doesn't need to be static
 		recordCount = 0;
 		memory = len * (long)Constants.MEMORY_POINTER;
-		tail = 0;
 	}
 
     @Override
 	public CacheObject get(int pos) {
-		CacheObject rec = find(pos);
-		if (rec != null) {
-//			System.out.printf("Retrieved %d\n", rec.getData());
-			removeFromLinkedList(rec);
-		}
-		return rec;
+		return find(pos);
 	}
 
 	@Override
@@ -99,16 +84,14 @@ public class CacheLIFO implements Cache {
 			}
 		}
 
+//		System.out.println("Inserting " + rec);
+		removeLastInIfRequired();
 		int index = rec.getPos() & mask;
 		rec.cacheChained = values[index];
 		values[index] = rec;
 		recordCount++;
 		memory += rec.getMemory();
-
-		lifoTracker.add(rec);
-		tail++;
-
-		removeLastInIfRequired();
+		addToFront(rec);
 	}
 
 	@Override
@@ -121,6 +104,7 @@ public class CacheLIFO implements Cache {
 				throw DbException.getInternalError("old!=record pos:" + pos + " old:" + old + " new:" + rec);
 			}
 			removeFromLinkedList(rec);
+			addToFront(rec);
 		}
 		return old;
 	}
@@ -171,7 +155,7 @@ public class CacheLIFO implements Cache {
 		long mem = memory;
 		int rc = recordCount;
 		boolean flushed = false;
-		CacheObject last = lifoTracker.get(tail);
+		CacheObject last = head.cachePrevious;
 
 		while (true) {
 			// edge checks
@@ -193,6 +177,7 @@ public class CacheLIFO implements Cache {
 			}
 
 			CacheObject check = last;
+			last = check.cachePrevious;
 			i++;                      // increase i
 			if (i >= recordCount) {
 				if (!flushed) {
@@ -209,23 +194,20 @@ public class CacheLIFO implements Cache {
 					break;
 				}
 			}
-			if (last == head) {
+			if (check == head) {
 				throw DbException.getInternalError("try to remove head");
 			}
 			// we are not allowed to remove it if the log is not yet written
 			// (because we need to log before writing the data)
 			// also, can't write it if the record is pinned
-			if (!last.canRemove()) {
-				removeFromLinkedList(last);
+			if (!check.canRemove()) {
+				removeFromLinkedList(check);
+				addToFront(check);
 				continue;
 			}
 
 			rc--; // decrement record count
 			mem -= check.getMemory(); // decrement memory
-			lifoTracker.remove(tail);
-			tail--;
-			
-
 			if (last.isChanged()) {
 				changed.add(last);
 			} else {
@@ -268,6 +250,16 @@ public class CacheLIFO implements Cache {
 		}
 	}
 
+	private void addToFront(CacheObject rec) {
+		if (rec == head) {
+			throw DbException.getInternalError("try to move head");
+		}
+		rec.cacheNext = head;
+		rec.cachePrevious = head.cachePrevious;
+		rec.cachePrevious.cacheNext = rec;
+		head.cachePrevious = rec;
+	}
+
 	private void removeFromLinkedList(CacheObject rec) {
 		if (rec == head) {
 			throw DbException.getInternalError("try to remove head");
@@ -291,9 +283,6 @@ public class CacheLIFO implements Cache {
 
 	@Override
 	public ArrayList<CacheObject> getAllChanged() {
-		// if(Database.CHECK) {
-		// testConsistency();
-		// }
 		ArrayList<CacheObject> list = new ArrayList<>();
 		CacheObject rec = head.cacheNext;
 		while (rec != head) {
@@ -309,9 +298,7 @@ public class CacheLIFO implements Cache {
 	public void setMaxMemory(int maxKb) {
 		long newSize = maxKb * 1024L / 4;
 		maxMemory = newSize < 0 ? 0 : newSize;
-		// can not resize, otherwise existing records are lost
-		// resize(maxSize);
-//		removeMostRecentlyUsedIfRequired();
+		removeLastInIfRequired();
 	}
 
 	@Override
@@ -321,13 +308,10 @@ public class CacheLIFO implements Cache {
 
 	@Override
 	public int getMemory() {
-		// CacheObject rec = head.cacheNext;
-		// while (rec != head) {
-		// System.out.println(rec.getMemory() + " " +
-		// MemoryFootprint.getObjectSize(rec) + " " + rec);
-		// rec = rec.cacheNext;
-		// }
 		return (int) (memory * 4L / 1024);
 	}
 
+	public String toString() {
+		return TYPE_NAME;
+	}
 }

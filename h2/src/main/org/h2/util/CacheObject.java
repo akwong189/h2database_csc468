@@ -93,6 +93,10 @@ public abstract class CacheObject implements Comparable<CacheObject> {
         return false;
     }
 
+    public void referenced() {
+        read = false;
+    }
+
     public boolean beenRead() {
         if (read) {
             return true;

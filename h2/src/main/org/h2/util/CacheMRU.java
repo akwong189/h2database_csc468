@@ -328,4 +328,7 @@ public class CacheMRU implements Cache {
 		return (int) (memory * 4L / 1024);
 	}
 
+	public String toString() {
+		return TYPE_NAME;
+	}
 }

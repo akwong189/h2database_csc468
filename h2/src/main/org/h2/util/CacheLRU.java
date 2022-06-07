@@ -47,7 +47,7 @@ public class CacheLRU implements Cache {
      */
     private long memory;
 
-    CacheLRU(CacheWriter writer, int maxMemoryKb, boolean fifo) {
+    public CacheLRU(CacheWriter writer, int maxMemoryKb, boolean fifo) {
         this.writer = writer;
         this.fifo = fifo;
         this.setMaxMemory(maxMemoryKb);
@@ -99,6 +99,9 @@ public class CacheLRU implements Cache {
         } else if (cacheType.equals("LIFO")) {
 //            System.out.println("Is LIFO");
             cache = new CacheLIFO(writer, cacheSize);
+        } else if (cacheType.equals("Clock")) {
+//            System.out.println("Is LIFO");
+            cache = new CacheClock(writer, cacheSize);
         } else {
             throw DbException.getInvalidValueException("CACHE_TYPE", cacheType);
         }
@@ -321,40 +324,8 @@ public class CacheLRU implements Cache {
         return rec;
     }
 
-    // private void testConsistency() {
-    // int s = size;
-    // HashSet set = new HashSet();
-    // for(int i=0; i<values.length; i++) {
-    // Record rec = values[i];
-    // if(rec == null) {
-    // continue;
-    // }
-    // set.add(rec);
-    // while(rec.chained != null) {
-    // rec = rec.chained;
-    // set.add(rec);
-    // }
-    // }
-    // Record rec = head.next;
-    // while(rec != head) {
-    // set.add(rec);
-    // rec = rec.next;
-    // }
-    // rec = head.previous;
-    // while(rec != head) {
-    // set.add(rec);
-    // rec = rec.previous;
-    // }
-    // if(set.size() != size) {
-    // System.out.println("size="+size+" but el.size="+set.size());
-    // }
-    // }
-
     @Override
     public ArrayList<CacheObject> getAllChanged() {
-        // if(Database.CHECK) {
-        // testConsistency();
-        // }
         ArrayList<CacheObject> list = new ArrayList<>();
         CacheObject rec = head.cacheNext;
         while (rec != head) {
@@ -382,13 +353,11 @@ public class CacheLRU implements Cache {
 
     @Override
     public int getMemory() {
-        // CacheObject rec = head.cacheNext;
-        // while (rec != head) {
-        // System.out.println(rec.getMemory() + " " +
-        // MemoryFootprint.getObjectSize(rec) + " " + rec);
-        // rec = rec.cacheNext;
-        // }
         return (int) (memory * 4L / 1024);
     }
 
+    public String toString() {
+        if (fifo) return "FIFO";
+        return TYPE_NAME;
+    }
 }

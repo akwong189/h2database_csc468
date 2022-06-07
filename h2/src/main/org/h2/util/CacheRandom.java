@@ -94,7 +94,7 @@ public class CacheRandom implements Cache {
             }
         }
 
-//        System.out.println(r.getMemory() + " + " + memory + " = " + (r.getMemory() + memory));
+        // to ensure that the new block is not remved first, 
         memory += r.getMemory();
         removeRandomIfRequired();
 

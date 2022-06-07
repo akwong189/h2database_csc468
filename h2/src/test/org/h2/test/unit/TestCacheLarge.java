@@ -107,6 +107,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         }
     }
 
+    // Test LRU cache
     private void testCache() {
         out = "";
         Cache c = CacheLRU.getCache(this, "LRU", 16);
@@ -116,6 +117,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         assertEquals("flush 0 flush 1 flush 2 flush 3 ", out);
     }
 
+    // Test Random cache
     private void testRandomCache() {
         out = "";
         Cache c = CacheLRU.getCache(this, "Random", 16);
@@ -124,6 +126,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         }
     }
 
+    // Test Random cache with more items
     private void testLargerRandomCache() {
         out = "";
         Cache c = CacheLRU.getCache(this, "Random", 16);
@@ -134,6 +137,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         System.out.println(out);
     }
 
+    // test MRU cache
     private void testMRUCache() {
         out = "";
         Cache c = CacheLRU.getCache(this, "MRU", 16);
@@ -143,6 +147,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         assertEquals("flush 15 flush 16 flush 17 flush 18 ", out);
     }
 
+    // test MRU cache with updates
     private void testMRUCacheWithGet() {
         out = "";
         Cache c = new CacheMRU(this, 16);
@@ -158,6 +163,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         assertEquals("flush 2 flush 3 flush 4 ", out);
     }
 
+    // test clock cahce
     private void testClockCache() {
         out = "";
         Cache c = new CacheClock(this, 16);
@@ -167,6 +173,7 @@ public class TestCacheLarge extends TestDb implements CacheWriter {
         assertEquals("flush 0 1 2 3 4 5 6 7 ", out);
     }
 
+    // test lifo cache, cache writer sorts the results so the ordering is the opposite direction
     private void testLIFOCache() {
         out = "";
         Cache c = new CacheLIFO(this, 16);

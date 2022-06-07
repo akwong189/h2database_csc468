@@ -81,6 +81,7 @@ public class CacheClock implements Cache {
     @Override
     public CacheObject get(int pos) {
         CacheObject rec = find(pos);
+        // set that the record is referenced
         if (rec != null) rec.referenced();
         return rec;
     }
@@ -95,6 +96,7 @@ public class CacheClock implements Cache {
             }
         }
 
+        // when placed, set that the record is referenced and prior to insertion remove any records if necessary
         r.referenced();
         removeClockIfRequired();
         memory += r.getMemory();
@@ -104,7 +106,6 @@ public class CacheClock implements Cache {
         values[index] = r;
         recordCount++;
         addToFront(r);
-//        System.out.println("Inserted " + r);
     }
 
     @Override
@@ -116,6 +117,7 @@ public class CacheClock implements Cache {
             if (old != record) {
                 throw DbException.getInternalError("old!=record pos:" + pos + " old:" + old + " new:" + record);
             }
+            // set that the record is referenced
             record.referenced();
         }
         return old;
@@ -142,6 +144,7 @@ public class CacheClock implements Cache {
             last.cacheChained = rec.cacheChained;
         }
 
+        // ensure that the pointer is not being removed, if so set to next pointer
         if (pointer == rec) {
             pointer = rec.cacheNext;
         }

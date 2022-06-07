@@ -78,6 +78,8 @@ public class CacheMRU implements Cache {
 				throw DbException.getInternalError("try to add a record twice at pos " + pos);
 			}
 		}
+
+		// don't want to remove the new record block too early
 		memory += rec.getMemory();
 		removeMostRecentlyUsedIfRequired();
 

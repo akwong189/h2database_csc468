@@ -83,8 +83,9 @@ public class CacheLIFO implements Cache {
 				throw DbException.getInternalError("try to add a record twice at pos " + pos);
 			}
 		}
-
 //		System.out.println("Inserting " + rec);
+
+		// remove the last placed record if needed but before adding in a new record
 		removeLastInIfRequired();
 		int index = rec.getPos() & mask;
 		rec.cacheChained = values[index];
